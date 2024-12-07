@@ -4,8 +4,8 @@ from algosdk.v2client import algod
 from typing import Dict, Any
 
 # Create a new algod client, configured to connect to our local sandbox
-algod_address = "https://testnet-api.algonode.cloud"
-algod_token = ""
+algod_address = "http://localhost:4001"
+algod_token = "a" * 64
 algod_client = algod.AlgodClient(algod_token, algod_address)
 
 #utility funtions
@@ -26,6 +26,11 @@ def wait_for_confirmation(txid):
         except Exception:
             pass
 
+# generate 2 accounts
+acct1pk, acct1addr = create_account()
+acct2pk, acct2addr = create_account()
+
+print("Fund accounts A and B with 10 ALGOs each before proceeding")
 
 # create an ASA
 def create_asa(creator_key, creator_address):
@@ -51,6 +56,8 @@ def create_asa(creator_key, creator_address):
     print(f"Created ASA with ID: {asset_id}")
     return asset_id
 
+asset_id = create_asa(acct1pk, acct1addr)
+
 # opt account B into the ASA
 def opt_in_asset(account_key, account_address, asset_id):
     params = algod_client.suggested_params()
@@ -65,6 +72,8 @@ def opt_in_asset(account_key, account_address, asset_id):
     txid = algod_client.send_transaction(stxn)
     print(f"Opt-in transaction sent with txID: {txid}")
     wait_for_confirmation(txid)
+    
+opt_in_asset(acct2pk, acct2addr, asset_id)
 
 # Transfer 1 unit of the ASA from A to B
 def transfer_asset(sender_key, sender_address, receiver_address, asset_id, amount):
@@ -80,6 +89,8 @@ def transfer_asset(sender_key, sender_address, receiver_address, asset_id, amoun
     txid = algod_client.send_transaction(stxn)
     print(f"Transfer transaction sent with txID: {txid}")
     wait_for_confirmation(txid)
+    
+transfer_asset(acct1pk, acct1addr, acct2addr, asset_id, 1)
 
 # Freeze the ASA in account B
 def freeze_asset(freeze_account_key, freeze_account_address, target_account, asset_id, freeze_state):
@@ -96,32 +107,6 @@ def freeze_asset(freeze_account_key, freeze_account_address, target_account, ass
     print(f"Freeze transaction sent with txID: {txid}")
     wait_for_confirmation(txid)
 
-# generate 2 accounts
-acct1pk, acct1addr = create_account()
-acct2pk, acct2addr = create_account()
-
-print("Fund accounts A and B with 10 ALGOs each before proceeding")
-
-asset_id = None
-
-print("Freeze ASA solution")
-# choice = input("what will you? \n1. create asa\n2. opt acct b into asa\n3. transfer 1 unit\n4. freeze asa\nchoose an option: ")
-
-continue_operation = 'y'
-
-while continue_operation == 'y':
-    choice = input("what will you? \n1. create asa\n2. opt acct b into asa\n3. transfer 1 unit\n4. freeze asa\nchoose an option: ")
-    if choice == '1':
-        asset_id = create_asa(acct1pk, acct1addr)
-    elif choice == '2':
-        opt_in_asset(acct2pk, acct2addr, asset_id)
-    elif choice == '3':
-        transfer_asset(acct1pk, acct1addr, acct2addr, asset_id, 1)
-    elif choice == '4':
-        freeze_asset(acct1pk, acct1addr, acct2addr, asset_id, True)
-    else:
-        print("invalid option")
-        
-    continue_operation = input("Would you like to do anything else[y/n]: ")
+freeze_asset(acct1pk, acct1addr, acct2addr, asset_id, True)
 
 print("Script completed successfully!")
